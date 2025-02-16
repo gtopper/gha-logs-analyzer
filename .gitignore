@@ -1,0 +1,6 @@
+.venv
+logs
+log_archives
+
+.DS_Store
+.idea/
