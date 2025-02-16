@@ -10,6 +10,9 @@ assert sys.version_info >= MIN_PYTHON, f"requires Python {'.'.join([str(n) for n
 RED = '\033[0;31m'
 NC = '\033[0m'
 
+branch = "development"
+logs_dir = f"logs/{branch}"
+
 suites = ["alerts", "api", "backwards_compatibility", "datastore", "examples", "feature_store", "logs",
           "model_monitoring", "projects", "runtimes"]
 suites.sort()
@@ -31,7 +34,7 @@ def format_timestamp(timestamp: datetime):
 
 
 def extract_run_metadata(run):
-    log_path = f"logs/{run}/0_Prepare System Tests Enterprise.txt"
+    log_path = f"{logs_dir}/{run}/0_Prepare System Tests Enterprise.txt"
     with open(log_path) as file:
         found = False
         for line in file:
@@ -47,7 +50,7 @@ def extract_run_metadata(run):
 
 
 def extract_failures_from_log(run, suite):
-    log_path = f"logs/{run}/Test {suite} [development]/9_Run System Tests.txt"
+    log_path = f"{logs_dir}/{run}/Test {suite} [{branch}]/9_Run System Tests.txt"
     if not os.path.exists(log_path):
         return
     failures = []
@@ -76,9 +79,11 @@ class RunInfo:
 
 
 def analyze_runs(suites):
-    runs = os.listdir("logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    runs = os.listdir(logs_dir)
     runs.sort()
 
+    print("Branch:", branch)
     print(f"Analyzing {len(suites)} suites: {suites}")
     print(f"Analyzing {len(runs)} runs:", ", ".join(map(lambda r: r[5:], runs)))
     run_info_by_run = {}
@@ -99,6 +104,10 @@ def analyze_runs(suites):
         run_info = RunInfo(run, timestamp, commit, previous_run_info)
         run_info_by_run[run] = run_info
         previous_run_info = run_info
+
+    if not runs:
+        print("Zero runs found")
+        return
 
     first_timestamp_str = format_timestamp(first_timestamp)
     last_timestamp_str = format_timestamp(last_timestamp)

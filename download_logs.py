@@ -6,6 +6,8 @@ import os.path
 import re
 
 branch = "development"
+log_archive_dir = f"log_archives/{branch}"
+log_archive_tmp_dir = f"log_archives/{branch}/tmp"
 branch_pattern = re.compile(r"\[[^]]+\]$")
 token = os.getenv("GITHUB_TOKEN")
 
@@ -14,8 +16,8 @@ pages = 2
 
 
 async def download_logs(session, run_id, logs_url):
-    target_tmp_path = f"log_archives/tmp/logs_{run_id}.zip"
-    target_path = f"log_archives/logs_{run_id}.zip"
+    target_tmp_path = f"{log_archive_dir}/tmp/logs_{run_id}.zip"
+    target_path = f"{log_archive_dir}/logs_{run_id}.zip"
 
     logs_response = await session.get(
         url=logs_url,
@@ -29,7 +31,7 @@ async def download_logs(session, run_id, logs_url):
         print(f"Skipping run {run_id} due to error {logs_response.status}: {await logs_response.text()}")
         return
     logs_data = await logs_response.read()
-    print(f"Writing {len(logs_data) / 1000000} MB of logs data to {target_path}")
+    print(f"Writing {len(logs_data) / 1000000:.2f} MB of logs data to {target_path}")
     with open(target_tmp_path, "wb") as logs_zip_file:
         logs_zip_file.write(logs_data)
     os.rename(target_tmp_path, target_path)
@@ -89,7 +91,6 @@ async def make_reqs(session, page):
 
     print(f"Listing jobs for {len(jobs_tasks)} runs...")
     jobs_dicts = await asyncio.gather(*jobs_tasks)
-    print(f"len(jobs_dicts)={len(jobs_dicts)}")
 
     runs_to_download = []
     for index, jobs_dict in enumerate(jobs_dicts):
@@ -101,14 +102,14 @@ async def make_reqs(session, page):
                 branch_found = branch_pattern.search(job["name"]).group(0)[1:-1]
                 break
 
-        if not branch:
-            raise AssertionError("Was not able to determine branch")
-
-        if branch_found != branch:
+        if not branch_found:
+            print(f"Skipping run {run_id} because its branch could not be determined")
+            continue
+        elif branch_found != branch:
             print(f"Skipping run {run_id} because it's for branch {branch_found}")
             continue
 
-        if os.path.exists(f"log_archives/logs_{run_id}.zip"):
+        if os.path.exists(f"{log_archive_dir}/logs_{run_id}.zip"):
             print(f"Skipping run {run_id} because target file already exists")
             continue
 
@@ -120,6 +121,7 @@ async def make_reqs(session, page):
     tasks = []
     q = asyncio.Queue(MAX_CONCURRENT_REQUESTS)
     get_until_done_task = asyncio.create_task(get_until_done(q))
+    os.makedirs(log_archive_tmp_dir, exist_ok=True)
     for index, run in enumerate(runs_to_download):
         print(index)
         task = asyncio.create_task(download_logs(session, run["id"], run["logs_url"]))
