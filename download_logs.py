@@ -1,15 +1,17 @@
 import asyncio
+import sys
 
 import aiohttp
 import os
 import os.path
 import re
 
-branch = "development"
+token = os.getenv("GITHUB_TOKEN")
+branch = os.getenv("BRANCH", "development")
+
 log_archive_dir = f"log_archives/{branch}"
 log_archive_tmp_dir = f"log_archives/{branch}/tmp"
 branch_pattern = re.compile(r"\[[^]]+\]$")
-token = os.getenv("GITHUB_TOKEN")
 
 MAX_CONCURRENT_REQUESTS = 20
 pages = 2
@@ -134,7 +136,8 @@ async def make_reqs(session, page):
 
 async def main():
     if not token:
-        raise Exception("GITHUB_TOKEN environment variable not set")
+        print(f"{sys.argv[0]}: ERROR: GITHUB_TOKEN environment variable not set", file=sys.stderr)
+        sys.exit(1)
     async with aiohttp.ClientSession() as session:
         for page in range(1, pages + 1):
             await make_reqs(session, page)

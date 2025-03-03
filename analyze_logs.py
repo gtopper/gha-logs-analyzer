@@ -10,7 +10,7 @@ assert sys.version_info >= MIN_PYTHON, f"requires Python {'.'.join([str(n) for n
 RED = '\033[0;31m'
 NC = '\033[0m'
 
-branch = "development"
+branch = os.getenv("BRANCH", "development")
 logs_dir = f"logs/{branch}"
 
 suites = ["alerts", "api", "backwards_compatibility", "datastore", "examples", "feature_store", "logs",
