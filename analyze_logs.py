@@ -121,6 +121,7 @@ def analyze_runs(suites):
             run_info = run_info_by_run[run]
             failures = extract_failures_from_log(run, suite)
             if failures is None:
+                last_failures = []
                 continue
             if first_timestamp is None:
                 first_timestamp = run_info.timestamp
