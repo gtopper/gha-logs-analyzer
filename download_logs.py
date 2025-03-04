@@ -75,15 +75,16 @@ async def make_reqs(session, page):
 
     num_runs = runs_dict["total_count"]
     print("Total number of runs:", num_runs)
-    runs_on_page = len(runs_dict["workflow_runs"])
+    workflow_runs = runs_dict["workflow_runs"]
+    runs_on_page = len(workflow_runs)
     print(f"Runs on page {page}:", runs_on_page)
 
     jobs_tasks = []
     runs = []
     q = asyncio.Queue(MAX_CONCURRENT_REQUESTS)
     get_until_done_task = asyncio.create_task(get_until_done(q))
-    for index, run in enumerate(runs_dict["workflow_runs"]):
-        print(index)
+    for index, run in enumerate(workflow_runs):
+        print(f"Getting workflow run {index + 1}/{len(workflow_runs)}...")
         runs.append(run)
         task = asyncio.create_task(get_job(session, run["jobs_url"]))
         jobs_tasks.append(task)
@@ -125,7 +126,7 @@ async def make_reqs(session, page):
     get_until_done_task = asyncio.create_task(get_until_done(q))
     os.makedirs(log_archive_tmp_dir, exist_ok=True)
     for index, run in enumerate(runs_to_download):
-        print(index)
+        print(f"Starting to download file {index + 1}/{len(runs_to_download)}...")
         task = asyncio.create_task(download_logs(session, run["id"], run["logs_url"]))
         tasks.append(task)
         await q.put(task)
