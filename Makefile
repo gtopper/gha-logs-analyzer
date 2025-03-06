@@ -12,3 +12,7 @@ unzip:
 .PHONY: analyze
 analyze:
 	python analyze_logs.py
+
+.PHONY: install-requirements
+install-requirements:
+	pip install -r requirements.txt
