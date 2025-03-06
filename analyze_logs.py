@@ -33,8 +33,21 @@ def format_timestamp(timestamp: datetime):
     return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def find_log_file(run_dir, suffix):
+    log_file_names = os.listdir(run_dir)
+    prepare_stage_log_file_name = None
+    for log_file_name in log_file_names:
+        if log_file_name.endswith(suffix):
+            prepare_stage_log_file_name = log_file_name
+            break
+    if prepare_stage_log_file_name is None:
+        raise Exception(f"No '{suffix}' log file found in {run_dir}")
+    return f"{run_dir}/{prepare_stage_log_file_name}"
+
+
 def extract_run_metadata(run):
-    log_path = f"{logs_dir}/{run}/0_Prepare System Tests Enterprise.txt"
+    run_dir = f"{logs_dir}/{run}"
+    log_path = find_log_file(run_dir, "Prepare System Tests Enterprise.txt")
     with open(log_path) as file:
         found = False
         for line in file:
@@ -50,7 +63,7 @@ def extract_run_metadata(run):
 
 
 def extract_failures_from_log(run, suite):
-    log_path = f"{logs_dir}/{run}/Test {suite} [{branch}]/9_Run System Tests.txt"
+    log_path = find_log_file(f"{logs_dir}/{run}", f"Test {suite} [{branch}].txt")
     if not os.path.exists(log_path):
         return
     failures = []
