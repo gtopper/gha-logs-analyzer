@@ -14,4 +14,4 @@ or
 ```shell
 GITHUB_TOKEN=... branch=... make
 ```
-to run on a specific branch (e.g. 1.7.x).
+to run on a branch other than `development` (e.g. `1.7.x`).
