@@ -126,6 +126,11 @@ def analyze_runs(suites):
         print("Zero runs found")
         return
 
+    first_timestamp_str = format_timestamp(first_timestamp)
+    last_timestamp_str = format_timestamp(last_timestamp)
+    print(f"From {RED}{first_timestamp_str}{NC} ({trunc(first_commit)}) to {RED}{last_timestamp_str}{NC} "
+          f"({trunc(last_commit)})")
+
     for suite in suites:
         oldest_consecutive_failure = {}
         last_failures = []
@@ -143,11 +148,6 @@ def analyze_runs(suites):
             oldest_consecutive_failure = new_oldest_consecutive_failure
 
             last_failures = failures
-
-        first_timestamp_str = format_timestamp(first_timestamp)
-        last_timestamp_str = format_timestamp(last_timestamp)
-        print(f"From {RED}{first_timestamp_str}{NC} ({trunc(first_commit)}) to {RED}{last_timestamp_str}{NC} "
-              f"({trunc(last_commit)})")
 
         if last_failures:
             print(f"---------------- {suite} ----------------")
