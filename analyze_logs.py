@@ -64,20 +64,25 @@ def extract_run_metadata(run):
 
 
 def extract_failures_from_log(run, suite):
-    try:
-        log_path = find_log_file(f"{logs_dir}/{run}", f"Test {suite} [{branch}].txt")
-    except FileNotFoundError as err:
-        if verbose:
-            print("Warning:", err)
-        return
+    log_path = find_log_file(f"{logs_dir}/{run}", f"Test {suite} [{branch}].txt")
     failures = []
     with open(log_path) as file:
+        completed = False
         found = False
+        failed = False
         for line in file:
+            if "============= slowest" in line:
+                completed = True
             if "= short test summary info =" in line:
                 found = True
                 break
+            if "Process completed with exit code" in line:
+                failed = True
+        if not completed:
+            raise Exception(f"Tests did not complete in {log_path}")
         if not found:
+            if failed:
+                raise Exception(f"No test summary found despite failure in {log_path}")
             return
         for line in file:
             if "FAILED" not in line:
@@ -136,8 +141,15 @@ def analyze_runs(suites):
         last_failures = []
         for run in runs:
             run_info = run_info_by_run[run]
-            failures = extract_failures_from_log(run, suite)
+            try:
+                failures = extract_failures_from_log(run, suite)
+            except Exception as err:
+                if verbose:
+                    print("Warning:", err)
+                # Continue without clearing previous failures
+                continue
             if failures is None:
+                last_failures = []
                 continue
             if first_timestamp is None:
                 first_timestamp = run_info.timestamp
