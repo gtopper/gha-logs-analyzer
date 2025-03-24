@@ -21,6 +21,7 @@ test_name_pattern = re.compile("[0-9-:.+ZT]+ FAILED ([^ ]+)")
 
 localize_tz = False
 abbreviated_test_names = True
+verbose = False
 
 
 def trunc(commit):
@@ -35,14 +36,14 @@ def format_timestamp(timestamp: datetime):
 
 def find_log_file(run_dir, suffix):
     log_file_names = os.listdir(run_dir)
-    prepare_stage_log_file_name = None
+    found_log_file_name = None
     for log_file_name in log_file_names:
         if log_file_name.endswith(suffix):
-            prepare_stage_log_file_name = log_file_name
+            found_log_file_name = log_file_name
             break
-    if prepare_stage_log_file_name is None:
-        raise Exception(f"No '{suffix}' log file found in {run_dir}")
-    return f"{run_dir}/{prepare_stage_log_file_name}"
+    if found_log_file_name is None:
+        raise FileNotFoundError(f"No '{suffix}' log file found in {run_dir}")
+    return f"{run_dir}/{found_log_file_name}"
 
 
 def extract_run_metadata(run):
@@ -63,8 +64,11 @@ def extract_run_metadata(run):
 
 
 def extract_failures_from_log(run, suite):
-    log_path = find_log_file(f"{logs_dir}/{run}", f"Test {suite} [{branch}].txt")
-    if not os.path.exists(log_path):
+    try:
+        log_path = find_log_file(f"{logs_dir}/{run}", f"Test {suite} [{branch}].txt")
+    except FileNotFoundError as err:
+        if verbose:
+            print("Warning:", err)
         return
     failures = []
     with open(log_path) as file:
@@ -122,11 +126,6 @@ def analyze_runs(suites):
         print("Zero runs found")
         return
 
-    first_timestamp_str = format_timestamp(first_timestamp)
-    last_timestamp_str = format_timestamp(last_timestamp)
-    print(f"From {RED}{first_timestamp_str}{NC} ({trunc(first_commit)}) to {RED}{last_timestamp_str}{NC} "
-          f"({trunc(last_commit)})")
-
     for suite in suites:
         oldest_consecutive_failure = {}
         last_failures = []
@@ -134,7 +133,6 @@ def analyze_runs(suites):
             run_info = run_info_by_run[run]
             failures = extract_failures_from_log(run, suite)
             if failures is None:
-                last_failures = []
                 continue
             if first_timestamp is None:
                 first_timestamp = run_info.timestamp
@@ -145,6 +143,11 @@ def analyze_runs(suites):
             oldest_consecutive_failure = new_oldest_consecutive_failure
 
             last_failures = failures
+
+        first_timestamp_str = format_timestamp(first_timestamp)
+        last_timestamp_str = format_timestamp(last_timestamp)
+        print(f"From {RED}{first_timestamp_str}{NC} ({trunc(first_commit)}) to {RED}{last_timestamp_str}{NC} "
+              f"({trunc(last_commit)})")
 
         if last_failures:
             print(f"---------------- {suite} ----------------")
