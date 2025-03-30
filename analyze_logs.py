@@ -85,8 +85,8 @@ def extract_failures_from_log(run, suite):
                 raise Exception(f"No test summary found despite failure in {log_path}")
             return
         for line in file:
-            if "FAILED" not in line:
-                break
+            if " FAILED " not in line:
+                continue
             match = test_name_pattern.match(line)
             failures.append(match.group(1))
     return failures
