@@ -1,17 +1,19 @@
+BRANCH ?= development
+
 .PHONY: all
 all: download unzip analyze
 
 .PHONY: download
 download:
-	python download_logs.py
+	BRANCH=$(BRANCH) python download_logs.py
 
 .PHONY: unzip
 unzip:
-	./unzip.sh
+	BRANCH=$(BRANCH) ./unzip.sh
 
 .PHONY: analyze
 analyze:
-	python analyze_logs.py
+	BRANCH=$(BRANCH) python analyze_logs.py
 
 .PHONY: install-requirements
 install-requirements:

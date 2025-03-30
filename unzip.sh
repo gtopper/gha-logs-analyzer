@@ -1,6 +1,9 @@
 #!/bin/bash
 
-BRANCH=development
+if [[ -z "$BRANCH" ]]; then
+    echo "BRANCH environment variable must be set" 1>&2
+    exit 1
+fi
 
 mkdir -p logs
 for path in log_archives/$BRANCH/*.zip; do
