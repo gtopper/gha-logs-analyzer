@@ -103,7 +103,6 @@ class RunInfo:
 def analyze_runs(suites):
     os.makedirs(logs_dir, exist_ok=True)
     runs = os.listdir(logs_dir)
-    runs.sort()
 
     print("Branch:", branch)
     print(f"Analyzing {len(suites)} suites: {suites}")
@@ -130,6 +129,8 @@ def analyze_runs(suites):
     if not runs:
         print("Zero runs found")
         return
+
+    runs.sort(key=lambda run: run_info_by_run[run].timestamp)
 
     first_timestamp_str = format_timestamp(first_timestamp)
     last_timestamp_str = format_timestamp(last_timestamp)
