@@ -93,7 +93,7 @@ def extract_failures_from_log(run, suite):
 
 
 class RunInfo:
-    def __init__(self, name: str, timestamp: datetime, commit: str, previous):
+    def __init__(self, name: str, timestamp: datetime, commit: str, previous=None):
         self.name = name
         self.timestamp = timestamp
         self.commit = commit
@@ -112,25 +112,31 @@ def analyze_runs(suites):
     last_timestamp = None
     first_commit = None
     last_commit = None
-    previous_run_info = None
     for run in runs:
         timestamp, commit = extract_run_metadata(run)
         timestamp = datetime.fromisoformat(timestamp)
-        if first_timestamp is None or timestamp < first_timestamp:
-            first_timestamp = timestamp
-            first_commit = commit
-        if last_timestamp is None or timestamp > last_timestamp:
-            last_timestamp = timestamp
-            last_commit = commit
-        run_info = RunInfo(run, timestamp, commit, previous_run_info)
+        run_info = RunInfo(run, timestamp, commit)
         run_info_by_run[run] = run_info
-        previous_run_info = run_info
 
     if not runs:
         print("Zero runs found")
         return
 
     runs.sort(key=lambda run: run_info_by_run[run].timestamp)
+
+    previous_run_info = None
+    for run in runs:
+        run_info = run_info_by_run[run]
+        run_info.previous = previous_run_info
+        previous_run_info = run_info
+        commit = run_info.commit
+        timestamp = run_info.timestamp
+        if first_timestamp is None or timestamp < first_timestamp:
+            first_timestamp = timestamp
+            first_commit = commit
+        if last_timestamp is None or timestamp > last_timestamp:
+            last_timestamp = timestamp
+            last_commit = commit
 
     first_timestamp_str = format_timestamp(first_timestamp)
     last_timestamp_str = format_timestamp(last_timestamp)
