@@ -146,13 +146,16 @@ def analyze_runs(suites):
     for suite in suites:
         oldest_consecutive_failure = {}
         last_failures = []
+        last_run_failed = False
         for run in runs:
+            last_run_failed = False
             run_info = run_info_by_run[run]
             try:
                 failures = extract_failures_from_log(run, suite)
             except Exception as err:
                 if verbose:
                     print("Warning:", err)
+                last_run_failed = True
                 # Continue without clearing previous failures
                 continue
             if failures is None:
@@ -168,8 +171,11 @@ def analyze_runs(suites):
 
             last_failures = failures
 
-        if last_failures:
+        if last_failures or last_run_failed:
             print(f"---------------- {suite} ----------------")
+
+        if last_run_failed:
+            print("Latest run failed before a summary was printed")
 
         for failure in last_failures:
             run_info = oldest_consecutive_failure[failure]
