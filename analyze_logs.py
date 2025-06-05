@@ -155,7 +155,6 @@ def analyze_runs(suites):
             except Exception as err:
                 if verbose:
                     print("Warning:", err)
-                last_run_failed = True
                 # Continue without clearing previous failures
                 continue
             if failures is None:
@@ -171,11 +170,8 @@ def analyze_runs(suites):
 
             last_failures = failures
 
-        if last_failures or last_run_failed:
+        if last_failures:
             print(f"---------------- {suite} ----------------")
-
-        if last_run_failed:
-            print("Latest run failed before a summary was printed")
 
         for failure in last_failures:
             run_info = oldest_consecutive_failure[failure]
