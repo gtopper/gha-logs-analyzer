@@ -48,7 +48,7 @@ async def get_job(session, jobs_url):
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    assert jobs_response.status == 200
+    assert jobs_response.status == 200, jobs_response
     jobs_dict = await jobs_response.json()
     return jobs_dict
 
@@ -70,7 +70,7 @@ async def make_reqs(session, page):
             "X-GitHub-Api-Version": "2022-11-28",
         },
     )
-    assert runs_response.status == 200
+    assert runs_response.status == 200, runs_response
     runs_dict = await runs_response.json()
 
     num_runs = runs_dict["total_count"]
