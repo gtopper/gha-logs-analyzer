@@ -12,6 +12,6 @@ GITHUB_TOKEN=... make
 ```
 or 
 ```shell
-GITHUB_TOKEN=... branch=... make
+GITHUB_TOKEN=... BRANCH=... make
 ```
 to run on a branch other than `development` (e.g. `1.7.x`).
