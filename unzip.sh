@@ -5,7 +5,7 @@ if [[ -z "$BRANCH" ]]; then
     exit 1
 fi
 
-mkdir -p logs
+mkdir -p "logs/$BRANCH"
 for path in log_archives/$BRANCH/*.zip; do
   echo Unpacking "$path"
   filename=$(basename "$path")

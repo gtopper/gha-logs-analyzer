@@ -56,7 +56,7 @@ def extract_run_metadata(run):
                 found = True
                 break
         if not found:
-            return
+            raise RuntimeError(f"Could not find line 'git log -1 --format=%H' in {log_path}")
         for commit_line in file:
             timestamp, commit = commit_line.strip().split(" ", 1)
             break
@@ -112,11 +112,18 @@ def analyze_runs(suites):
     last_timestamp = None
     first_commit = None
     last_commit = None
+    runs_with_failures_removed = []
     for run in runs:
-        timestamp, commit = extract_run_metadata(run)
+        try:
+            timestamp, commit = extract_run_metadata(run)
+        except (RuntimeError, FileNotFoundError) as err:
+            print(f"Failed to extract run '{run}' metadata: {err}")
+            continue
+        runs_with_failures_removed.append(run)
         timestamp = datetime.fromisoformat(timestamp)
         run_info = RunInfo(run, timestamp, commit)
         run_info_by_run[run] = run_info
+    runs = runs_with_failures_removed
 
     if not runs:
         print("Zero runs found")
@@ -146,9 +153,7 @@ def analyze_runs(suites):
     for suite in suites:
         oldest_consecutive_failure = {}
         last_failures = []
-        last_run_failed = False
         for run in runs:
-            last_run_failed = False
             run_info = run_info_by_run[run]
             try:
                 failures = extract_failures_from_log(run, suite)
