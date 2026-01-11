@@ -15,7 +15,13 @@ log_archive_tmp_dir = f"log_archives/{branch}/tmp"
 branch_pattern = re.compile(r"\[[^]]+\]$")
 
 MAX_CONCURRENT_REQUESTS = 20
-pages = 2
+MAX_PAGES = 2
+
+GITHUB_API_REQUEST_HEADERS = {
+    "Accept": "application/vnd.github+json",
+    "Authorization": f"Bearer {token}",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 
 
 async def download_logs(session, run_id, logs_url):
@@ -24,14 +30,14 @@ async def download_logs(session, run_id, logs_url):
 
     logs_response = await session.get(
         url=logs_url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
+        headers=GITHUB_API_REQUEST_HEADERS,
     )
     if logs_response.status != 200:
-        print(f"Skipping run {run_id} due to error {logs_response.status}: {await logs_response.text()}")
+        response_text = await logs_response.text()
+        response_text = response_text.strip()
+        if response_text:
+            response_text = f": {response_text}"
+        print(f"Skipping run {run_id} due to error {logs_response.status}{response_text}")
         return
     try:
         logs_data = await logs_response.read()
@@ -47,11 +53,7 @@ async def download_logs(session, run_id, logs_url):
 async def get_job(session, jobs_url):
     jobs_response = await session.get(
         url=jobs_url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
+        headers=GITHUB_API_REQUEST_HEADERS,
     )
     assert jobs_response.status == 200, jobs_response
     jobs_dict = await jobs_response.json()
@@ -61,11 +63,7 @@ async def get_job(session, jobs_url):
 async def make_reqs(session, page):
     runs_response = await session.get(
         url=f"https://api.github.com/repos/mlrun/mlrun/actions/workflows/system-tests-enterprise.yml/runs?status=completed&per_page=100&page={page}",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
+        headers=GITHUB_API_REQUEST_HEADERS,
     )
     assert runs_response.status == 200, runs_response
     runs_dict = await runs_response.json()
@@ -150,7 +148,7 @@ async def main():
         print(f"{sys.argv[0]}: ERROR: GITHUB_TOKEN environment variable not set", file=sys.stderr)
         sys.exit(1)
     async with aiohttp.ClientSession() as session:
-        for page in range(1, pages + 1):
+        for page in range(1, MAX_PAGES + 1):
             await make_reqs(session, page)
 
 
