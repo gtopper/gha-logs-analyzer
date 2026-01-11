@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import sys
 
 import aiohttp
@@ -32,7 +33,11 @@ async def download_logs(session, run_id, logs_url):
     if logs_response.status != 200:
         print(f"Skipping run {run_id} due to error {logs_response.status}: {await logs_response.text()}")
         return
-    logs_data = await logs_response.read()
+    try:
+        logs_data = await logs_response.read()
+    except Exception as exc:
+        print(f"Skipping run {run_id} due to error reading logs data: {exc}")
+        return
     print(f"Writing {len(logs_data) / 1000000:.2f} MB of logs data to {target_path}")
     with open(target_tmp_path, "wb") as logs_zip_file:
         logs_zip_file.write(logs_data)
@@ -53,14 +58,6 @@ async def get_job(session, jobs_url):
     return jobs_dict
 
 
-async def get_until_done(q: asyncio.Queue):
-    while True:
-        task = await q.get()
-        if task is None:
-            break
-        await task
-
-
 async def make_reqs(session, page):
     runs_response = await session.get(
         url=f"https://api.github.com/repos/mlrun/mlrun/actions/workflows/system-tests-enterprise.yml/runs?status=completed&per_page=100&page={page}",
@@ -79,21 +76,29 @@ async def make_reqs(session, page):
     runs_on_page = len(workflow_runs)
     print(f"Runs on page {page}:", runs_on_page)
 
-    jobs_tasks = []
+    print(f"Listing jobs for {len(workflow_runs)} runs...")
+
+    tasks = []
     runs = []
-    q = asyncio.Queue(MAX_CONCURRENT_REQUESTS)
-    get_until_done_task = asyncio.create_task(get_until_done(q))
-    for index, run in enumerate(workflow_runs):
-        print(f"Getting workflow run {index + 1}/{len(workflow_runs)}...")
+    remaining_runs_to_list = copy.copy(workflow_runs)
+    index = 0
+    jobs_dicts = []
+    while remaining_runs_to_list:
+        if len(tasks) == MAX_CONCURRENT_REQUESTS:
+            job_dict = await tasks[0]
+            jobs_dicts.append(job_dict)
+            tasks = tasks[1:]
+        index += 1
+        print(f"Getting workflow run {index}/{len(workflow_runs)}...")
+        run = remaining_runs_to_list[0]
+        remaining_runs_to_list = remaining_runs_to_list[1:]
         runs.append(run)
         task = asyncio.create_task(get_job(session, run["jobs_url"]))
-        jobs_tasks.append(task)
-        await q.put(task)
-    await q.put(None)
-    await get_until_done_task
+        tasks.append(task)
 
-    print(f"Listing jobs for {len(jobs_tasks)} runs...")
-    jobs_dicts = await asyncio.gather(*jobs_tasks)
+    for task in tasks:
+        job_dict = await task
+        jobs_dicts.append(job_dict)
 
     runs_to_download = []
     for index, jobs_dict in enumerate(jobs_dicts):
@@ -122,17 +127,22 @@ async def make_reqs(session, page):
     print(f"{len(run_ids_to_download)} run IDs to download:", run_ids_to_download)
 
     tasks = []
-    q = asyncio.Queue(MAX_CONCURRENT_REQUESTS)
-    get_until_done_task = asyncio.create_task(get_until_done(q))
     os.makedirs(log_archive_tmp_dir, exist_ok=True)
-    for index, run in enumerate(runs_to_download):
-        print(f"Starting to download file {index + 1}/{len(runs_to_download)}...")
+    remaining_runs_to_download = copy.copy(runs_to_download)
+    index = 0
+    while remaining_runs_to_download:
+        if len(tasks) == MAX_CONCURRENT_REQUESTS:
+            await tasks[0]
+            tasks = tasks[1:]
+        index += 1
+        print(f"Starting to download file {index}/{len(runs_to_download)}...")
+        run = remaining_runs_to_download[0]
+        remaining_runs_to_download = remaining_runs_to_download[1:]
         task = asyncio.create_task(download_logs(session, run["id"], run["logs_url"]))
         tasks.append(task)
-        await q.put(task)
-    await q.put(None)
-    await get_until_done_task
-    await asyncio.gather(*tasks)
+
+        for task in tasks:
+            await task
 
 
 async def main():
