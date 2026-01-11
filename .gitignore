@@ -4,3 +4,5 @@ log_archives
 
 .DS_Store
 .idea/
+
+Pipfile
