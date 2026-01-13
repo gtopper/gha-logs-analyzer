@@ -9,6 +9,9 @@ mkdir -p "logs/$BRANCH"
 for path in log_archives/$BRANCH/*.zip; do
   echo Unpacking "$path"
   filename=$(basename "$path")
-  # -o to always overwrite, -n to never overwrite
-  unzip -n "$path" -d "logs/$BRANCH/${filename%.*}";
+  # if file is nonempty (we create an empty file when a download fails, to prevent further attempts)
+  if [ -s "$filename" ]; then
+    # -o to always overwrite, -n to never overwrite
+    unzip -n "$path" -d "logs/$BRANCH/${filename%.*}";
+  fi
 done

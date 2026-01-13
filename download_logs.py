@@ -43,6 +43,9 @@ async def download_logs(session, run_id, logs_url):
         logs_data = await logs_response.read()
     except Exception as exc:
         print(f"Skipping run {run_id} due to error reading logs data: {exc}")
+        print(f"Writing empty file to {target_path} to prevent future attempts")
+        with open(target_path, "wb"):
+            pass
         return
     print(f"Writing {len(logs_data) / 1000000:.2f} MB of logs data to {target_path}")
     with open(target_tmp_path, "wb") as logs_zip_file:
